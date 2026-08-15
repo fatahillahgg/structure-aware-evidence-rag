@@ -89,3 +89,9 @@ uv run python evaluate.py --retrieval-only
 ```
 
 The retriever combines dense FAISS similarity and sparse BM25 rankings with RRF. The evaluation command prints the current scores for the 24-question dataset; generation scores can vary slightly between model responses.
+
+Run the network-free unit tests:
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
