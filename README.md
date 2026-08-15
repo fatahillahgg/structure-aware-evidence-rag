@@ -59,7 +59,7 @@ Use `retrieve()` when scores and document metadata are needed, or `build_context
 
 ## Ask Questions With Naive RAG
 
-The RAG flow combines dense FAISS search and sparse BM25 search with Reciprocal Rank Fusion (RRF), reranks the candidates with a local CrossEncoder, then sends the top chunks as context to Gemini through OpenRouter:
+The RAG flow first rewrites the user query for retrieval, then combines dense FAISS search and sparse BM25 search with Reciprocal Rank Fusion (RRF), reranks the candidates with a local CrossEncoder, and sends the top chunks as context to Gemini through OpenRouter:
 
 ```bash
 uv run python rag.py "What accuracy did VGG16 achieve?"

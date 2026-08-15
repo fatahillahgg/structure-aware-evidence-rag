@@ -14,6 +14,12 @@ Use only the context provided below. If the answer is not in the context, say
 that you do not have enough information in the paper. Do not invent facts.
 Keep the answer concise and mention relevant numbers when available."""
 
+QUERY_REWRITE_PROMPT = """You rewrite user questions for retrieval from one research paper.
+Convert the question into one concise, standalone search query.
+Resolve conversational references when possible, preserve model names, metrics,
+numbers, and technical terms, and do not answer the question.
+Return only the rewritten query, with no explanation."""
+
 
 @lru_cache(maxsize=1)
 def create_llm() -> ChatOpenAI:
@@ -35,13 +41,30 @@ def create_llm() -> ChatOpenAI:
     )
 
 
+def rewrite_query(question: str) -> str:
+    """Rewrite a user question into a standalone retrieval query."""
+    if not question.strip():
+        raise ValueError("question must not be empty")
+
+    response = create_llm().invoke(
+        [
+            ("system", QUERY_REWRITE_PROMPT),
+            ("human", question),
+        ]
+    )
+    rewritten = str(response.content).strip()
+    return rewritten or question.strip()
+
+
 def answer_question(
     question: str,
     k: int = 4,
     index_path: str | Path = DEFAULT_INDEX_PATH,
+    retrieval_query: str | None = None,
 ) -> str:
     """Retrieve paper context and generate a grounded answer."""
-    results = retrieve(question, k=k, index_path=index_path)
+    rewritten_question = retrieval_query or rewrite_query(question)
+    results = retrieve(rewritten_question, k=k, index_path=index_path)
     context = "\n\n---\n\n".join(
         f"Source chunk {number}:\n{document.page_content}"
         for number, (document, _) in enumerate(results, start=1)

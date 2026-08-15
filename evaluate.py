@@ -7,7 +7,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 
-from rag import answer_question
+from rag import answer_question, rewrite_query
 from retrieval import DEFAULT_INDEX_PATH, retrieve
 
 
@@ -51,9 +51,14 @@ def token_f1(prediction: str, reference: str) -> float:
 
 
 def evaluate_item(item: dict[str, Any], k: int, generate: bool) -> dict[str, Any]:
-    results = retrieve(item["question"], k=k)
+    retrieval_query = rewrite_query(item["question"]) if generate else item["question"]
+    results = retrieve(retrieval_query, k=k)
     context = "\n".join(document.page_content for document, _ in results)
-    answer = answer_question(item["question"], k=k) if generate else ""
+    answer = (
+        answer_question(item["question"], k=k, retrieval_query=retrieval_query)
+        if generate
+        else ""
+    )
     keywords = item.get("expected_keywords", [])
 
     return {

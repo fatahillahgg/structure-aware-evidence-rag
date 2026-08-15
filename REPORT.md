@@ -4,10 +4,10 @@
 
 Implemented an end-to-end retrieval-augmented generation system for the lung cancer CT scan research paper.
 
-The final retrieval pipeline is hybrid search with reranking:
+The final RAG pipeline is query-rewritten hybrid search with reranking:
 
 ```text
-Dense FAISS search + Sparse BM25 search + Reciprocal Rank Fusion (RRF) + CrossEncoder reranking
+Query Rewriter + Dense FAISS search + Sparse BM25 search + Reciprocal Rank Fusion (RRF) + CrossEncoder reranking
 ```
 
 Retrieved context is sent to Gemini through OpenRouter to generate grounded answers.
@@ -22,6 +22,7 @@ Retrieved context is sent to Gemini through OpenRouter to generate grounded answ
 - Added sparse lexical retrieval with Okapi BM25.
 - Combined dense and sparse rankings with RRF.
 - Reranked the RRF candidate pool with a local CrossEncoder.
+- Added LLM-based query rewriting before retrieval.
 - Added Gemini access through OpenRouter.
 - Added a CLI for question answering in `rag.py`.
 - Added a Gradio chatbot in `app.py`.
@@ -51,17 +52,18 @@ rag_paper/
 
 ## Retrieval Architecture
 
-1. The query is embedded with the same MiniLM model used for document chunks.
-2. FAISS returns dense semantic matches.
-3. BM25 returns lexical matches based on terms in the query.
-4. RRF merges both ranked lists using:
+1. The user question is rewritten into a concise standalone retrieval query by Gemini.
+2. The rewritten query is embedded with the same MiniLM model used for document chunks.
+3. FAISS returns dense semantic matches.
+4. BM25 returns lexical matches based on terms in the rewritten query.
+5. RRF merges both ranked lists using:
 
    ```text
    RRF score = 1 / (60 + rank)
    ```
 
-5. The fused candidates are reranked by `cross-encoder/ms-marco-MiniLM-L-6-v2` using query-chunk relevance scores.
-6. The highest-ranked reranked chunks are passed to the language model.
+6. The fused candidates are reranked by `cross-encoder/ms-marco-MiniLM-L-6-v2` using query-chunk relevance scores.
+7. The highest-ranked reranked chunks are passed to the language model.
 
 ## Evaluation
 
@@ -144,6 +146,7 @@ uv run python evaluate.py --retrieval-only
 
 ## Current Limitations
 
+- The query rewriter requires an LLM call before retrieval.
 - The RRF constant, candidate depth, and reranker model are fixed defaults.
 - BM25 is rebuilt in memory when the process starts.
 - Evaluation uses keyword recall and token F1 rather than a semantic judge.
