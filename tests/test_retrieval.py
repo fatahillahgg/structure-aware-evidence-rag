@@ -4,7 +4,7 @@ from unittest.mock import patch
 from langchain_core.documents import Document
 
 from evaluate import keyword_recall, token_f1
-from retrieval import hybrid_retrieve, reciprocal_rank_fusion
+from retrieval import hybrid_retrieve, reciprocal_rank_fusion, rerank
 
 
 class RetrievalTests(unittest.TestCase):
@@ -29,11 +29,24 @@ class RetrievalTests(unittest.TestCase):
 
         with patch("retrieval.dense_retrieve", return_value=dense) as dense_mock:
             with patch("retrieval.bm25_retrieve", return_value=sparse) as sparse_mock:
-                results = hybrid_retrieve("test query", k=1)
+                with patch("retrieval.rerank", side_effect=lambda query, items, k: items[:k]) as rerank_mock:
+                    results = hybrid_retrieve("test query", k=1)
 
         dense_mock.assert_called_once()
         sparse_mock.assert_called_once()
+        rerank_mock.assert_called_once()
         self.assertEqual(len(results), 1)
+
+    def test_rerank_orders_candidates_by_cross_encoder_score(self) -> None:
+        first = Document(page_content="first")
+        second = Document(page_content="second")
+
+        with patch("retrieval._create_reranker") as model_factory:
+            model_factory.return_value.predict.return_value = [0.1, 0.9]
+            results = rerank("query", [(first, 1.0), (second, 0.5)], k=2)
+
+        self.assertEqual([document.page_content for document, _ in results], ["second", "first"])
+        self.assertEqual(results[0][1], 0.9)
 
     def test_hybrid_retrieval_rejects_empty_queries(self) -> None:
         with self.assertRaises(ValueError):

@@ -11,6 +11,7 @@ cp .env.example .env
 ```
 
 Add your OpenRouter API key to `.env`. Gemini will be accessed through OpenRouter using the configured `OPENROUTER_MODEL`.
+If Hugging Face requires authentication when downloading the reranker, also add `HF_TOKEN` to `.env`.
 
 ## Load the Cleaned Paper
 
@@ -58,7 +59,7 @@ Use `retrieve()` when scores and document metadata are needed, or `build_context
 
 ## Ask Questions With Naive RAG
 
-The RAG flow combines dense FAISS search and sparse BM25 search with Reciprocal Rank Fusion (RRF), then sends the top chunks as context to Gemini through OpenRouter:
+The RAG flow combines dense FAISS search and sparse BM25 search with Reciprocal Rank Fusion (RRF), reranks the candidates with a local CrossEncoder, then sends the top chunks as context to Gemini through OpenRouter:
 
 ```bash
 uv run python rag.py "What accuracy did VGG16 achieve?"
@@ -88,7 +89,7 @@ This generates `data/evaluation/naive_rag_performance.png` and `data/evaluation/
 uv run python evaluate.py --retrieval-only
 ```
 
-The retriever combines dense FAISS similarity and sparse BM25 rankings with RRF. The evaluation command prints the current scores for the 24-question dataset; generation scores can vary slightly between model responses.
+The retriever combines dense FAISS similarity and sparse BM25 rankings with RRF, then applies `cross-encoder/ms-marco-MiniLM-L-6-v2` to rerank the candidate chunks. The evaluation command prints the current scores for the 24-question dataset; generation scores can vary slightly between model responses.
 
 Run the network-free unit tests:
 

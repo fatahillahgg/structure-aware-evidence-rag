@@ -2,12 +2,18 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
 from langchain_core.documents import Document
 from rank_bm25 import BM25Okapi
+from sentence_transformers import CrossEncoder
 
 from chunker import chunk_documents
 from loader import load_paper
 from vector_store import DEFAULT_INDEX_PATH, load_vector_store
+
+
+load_dotenv()
+RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 def _tokenize(text: str) -> list[str]:
@@ -55,6 +61,30 @@ def reciprocal_rank_fusion(
     return [(documents[key], scores[key]) for key in ranked_documents]
 
 
+@lru_cache(maxsize=1)
+def _create_reranker() -> CrossEncoder:
+    """Load the local cross-encoder once per process."""
+    return CrossEncoder(RERANKER_MODEL)
+
+
+def rerank(
+    query: str,
+    candidates: list[tuple[Document, float]],
+    k: int,
+) -> list[tuple[Document, float]]:
+    """Rerank RRF candidates using query-document relevance scores."""
+    if not candidates:
+        return []
+
+    pairs = [(query, document.page_content) for document, _ in candidates]
+    relevance_scores = _create_reranker().predict(pairs)
+    reranked = [
+        (document, float(score))
+        for (document, _), score in zip(candidates, relevance_scores, strict=True)
+    ]
+    return sorted(reranked, key=lambda item: item[1], reverse=True)[:k]
+
+
 def hybrid_retrieve(
     query: str,
     k: int = 4,
@@ -62,7 +92,7 @@ def hybrid_retrieve(
     candidate_k: int | None = None,
     rrf_k: int = 60,
 ) -> list[tuple[Document, float]]:
-    """Fuse dense FAISS and sparse BM25 rankings with RRF."""
+    """Fuse dense and sparse rankings, then rerank the RRF candidates."""
     if not query.strip():
         raise ValueError("query must not be empty")
     if k < 1:
@@ -70,14 +100,15 @@ def hybrid_retrieve(
     if rrf_k < 1:
         raise ValueError("rrf_k must be at least 1")
 
-    candidates = max(k, candidate_k or k)
-    return reciprocal_rank_fusion(
+    candidates = max(k, candidate_k or max(10, k * 3))
+    fused = reciprocal_rank_fusion(
         [
             dense_retrieve(query, k=candidates, index_path=index_path),
             bm25_retrieve(query, k=candidates),
         ],
         k=rrf_k,
-    )[:k]
+    )
+    return rerank(query, fused, k=k)
 
 
 def retrieve(

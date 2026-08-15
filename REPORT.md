@@ -4,10 +4,10 @@
 
 Implemented an end-to-end retrieval-augmented generation system for the lung cancer CT scan research paper.
 
-The final retrieval pipeline is hybrid search:
+The final retrieval pipeline is hybrid search with reranking:
 
 ```text
-Dense FAISS search + Sparse BM25 search + Reciprocal Rank Fusion (RRF)
+Dense FAISS search + Sparse BM25 search + Reciprocal Rank Fusion (RRF) + CrossEncoder reranking
 ```
 
 Retrieved context is sent to Gemini through OpenRouter to generate grounded answers.
@@ -21,6 +21,7 @@ Retrieved context is sent to Gemini through OpenRouter to generate grounded answ
 - Added dense semantic retrieval with FAISS.
 - Added sparse lexical retrieval with Okapi BM25.
 - Combined dense and sparse rankings with RRF.
+- Reranked the RRF candidate pool with a local CrossEncoder.
 - Added Gemini access through OpenRouter.
 - Added a CLI for question answering in `rag.py`.
 - Added a Gradio chatbot in `app.py`.
@@ -59,7 +60,8 @@ rag_paper/
    RRF score = 1 / (60 + rank)
    ```
 
-5. The highest-ranked fused chunks are passed to the language model.
+5. The fused candidates are reranked by `cross-encoder/ms-marco-MiniLM-L-6-v2` using query-chunk relevance scores.
+6. The highest-ranked reranked chunks are passed to the language model.
 
 ## Evaluation
 
@@ -67,11 +69,11 @@ The evaluation dataset contains 24 questions across direct retrieval, methodolog
 
 Latest full evaluation:
 
-- Retrieval keyword recall: **68.9%**
-- Answer keyword recall: **57.5%**
-- Answer token F1: **41.5%**
+- Retrieval keyword recall: **77.4%**
+- Answer keyword recall: **73.8%**
+- Answer token F1: **42.2%**
 
-The hybrid retriever improved retrieval keyword recall from the previous dense-only score of **61.7%** to **68.9%**.
+The CrossEncoder reranker improved retrieval keyword recall from the previous RRF score of **68.9%** to **77.4%**. Compared with the previous full evaluation, answer keyword recall increased from **57.5%** to **73.8%**, while answer token F1 increased from **41.5%** to **42.2%**.
 
 Generated files:
 
@@ -142,7 +144,7 @@ uv run python evaluate.py --retrieval-only
 
 ## Current Limitations
 
-- The RRF constant and candidate depth are fixed defaults.
+- The RRF constant, candidate depth, and reranker model are fixed defaults.
 - BM25 is rebuilt in memory when the process starts.
 - Evaluation uses keyword recall and token F1 rather than a semantic judge.
 - The chatbot answers each turn independently and does not use conversation history.
