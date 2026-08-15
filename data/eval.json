@@ -1,0 +1,194 @@
+[
+  {
+    "id": "rag-001",
+    "question": "What was the main objective of the study?",
+    "expected_answer": "The study evaluated VGG16 for classifying lung CT scan images and compared its performance with other CNN architectures for lung cancer detection.",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "expected_keywords": ["VGG16", "CT scan images", "lung cancer detection", "CNN architectures"]
+  },
+  {
+    "id": "rag-002",
+    "question": "What three classes were used for the lung CT images?",
+    "expected_answer": "The images were classified as Normal, Benign, or Malignant.",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "expected_keywords": ["Normal", "Benign", "Malignant"]
+  },
+  {
+    "id": "rag-003",
+    "question": "Which CNN architectures were compared in the experiment?",
+    "expected_answer": "The study compared VGG16 with ResNet50, MobileNetV2, and InceptionV3.",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "expected_keywords": ["VGG16", "ResNet50", "MobileNetV2", "InceptionV3"]
+  },
+  {
+    "id": "rag-004",
+    "question": "Which pretrained dataset was used to initialize VGG16?",
+    "expected_answer": "VGG16 was initialized using ImageNet pretrained weights.",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "expected_keywords": ["ImageNet", "pretrained weights", "transfer learning"]
+  },
+  {
+    "id": "rag-005",
+    "question": "How was transfer learning applied to VGG16 in this study?",
+    "expected_answer": "The model used weights pretrained on ImageNet and was adapted for the three-class lung CT classification task.",
+    "category": "methodology",
+    "difficulty": "medium",
+    "expected_keywords": ["ImageNet", "pretrained", "transfer learning", "three-class"]
+  },
+  {
+    "id": "rag-006",
+    "question": "What loss function and optimizer were used to train VGG16?",
+    "expected_answer": "The model was trained with categorical cross-entropy loss and the Adam optimizer.",
+    "category": "methodology",
+    "difficulty": "easy",
+    "expected_keywords": ["categorical cross-entropy", "Adam"]
+  },
+  {
+    "id": "rag-007",
+    "question": "What is the role of the SoftMax layer in the VGG16 model?",
+    "expected_answer": "The SoftMax output layer converts the model outputs into probabilities for the three CT image classes and selects the predicted class.",
+    "category": "methodology",
+    "difficulty": "medium",
+    "expected_keywords": ["SoftMax", "probabilities", "three classes", "Normal", "Benign", "Malignant"]
+  },
+  {
+    "id": "rag-008",
+    "question": "How does Grad-CAM contribute to the study's model evaluation?",
+    "expected_answer": "Grad-CAM provides visual explanations by highlighting image regions that influenced the model's prediction, improving interpretability.",
+    "category": "methodology",
+    "difficulty": "medium",
+    "expected_keywords": ["Grad-CAM", "visual explanations", "highlight", "interpretability"]
+  },
+  {
+    "id": "rag-009",
+    "question": "Which model achieved the highest reported test accuracy?",
+    "expected_answer": "VGG16 achieved the highest reported test accuracy, at 98.18%.",
+    "category": "results",
+    "difficulty": "easy",
+    "expected_keywords": ["VGG16", "98.18%", "highest test accuracy"]
+  },
+  {
+    "id": "rag-010",
+    "question": "What test accuracy did MobileNetV2 achieve?",
+    "expected_answer": "MobileNetV2 achieved a test accuracy of 93.64%.",
+    "category": "results",
+    "difficulty": "easy",
+    "expected_keywords": ["MobileNetV2", "93.64%"]
+  },
+  {
+    "id": "rag-011",
+    "question": "What test accuracy did ResNet50 achieve?",
+    "expected_answer": "ResNet50 achieved a test accuracy of 93.33%.",
+    "category": "results",
+    "difficulty": "easy",
+    "expected_keywords": ["ResNet50", "93.33%"]
+  },
+  {
+    "id": "rag-012",
+    "question": "What test accuracy did InceptionV3 achieve?",
+    "expected_answer": "InceptionV3 achieved a test accuracy of 88.79%.",
+    "category": "results",
+    "difficulty": "easy",
+    "expected_keywords": ["InceptionV3", "88.79%"]
+  },
+  {
+    "id": "rag-013",
+    "question": "How did VGG16's test accuracy compare with MobileNetV2's?",
+    "expected_answer": "VGG16 scored 98.18%, exceeding MobileNetV2's 93.64% by 4.54 percentage points.",
+    "category": "comparison",
+    "difficulty": "medium",
+    "expected_keywords": ["VGG16", "98.18%", "MobileNetV2", "93.64%", "4.54 percentage points"]
+  },
+  {
+    "id": "rag-014",
+    "question": "Rank the four evaluated architectures from highest to lowest test accuracy.",
+    "expected_answer": "VGG16 (98.18%), MobileNetV2 (93.64%), ResNet50 (93.33%), then InceptionV3 (88.79%).",
+    "category": "comparison",
+    "difficulty": "medium",
+    "expected_keywords": ["VGG16", "MobileNetV2", "ResNet50", "InceptionV3", "98.18%", "93.64%", "93.33%", "88.79%"]
+  },
+  {
+    "id": "rag-015",
+    "question": "Which architecture performed worst in test accuracy, and how far behind VGG16 was it?",
+    "expected_answer": "InceptionV3 performed worst at 88.79%, which was 9.39 percentage points lower than VGG16's 98.18%.",
+    "category": "comparison",
+    "difficulty": "medium",
+    "expected_keywords": ["InceptionV3", "88.79%", "VGG16", "98.18%", "9.39 percentage points"]
+  },
+  {
+    "id": "rag-016",
+    "question": "How close were MobileNetV2 and ResNet50 in test accuracy?",
+    "expected_answer": "They were very close: MobileNetV2 scored 93.64% and ResNet50 scored 93.33%, a difference of 0.31 percentage points.",
+    "category": "comparison",
+    "difficulty": "medium",
+    "expected_keywords": ["MobileNetV2", "93.64%", "ResNet50", "93.33%", "0.31 percentage points"]
+  },
+  {
+    "id": "rag-017",
+    "question": "What limitation does the paper identify in using 2D CT images for classification?",
+    "expected_answer": "Using only 2D CT images can limit diagnostic performance because it does not capture the full three-dimensional information available in CT data.",
+    "category": "limitations",
+    "difficulty": "medium",
+    "expected_keywords": ["2D CT images", "limitation", "three-dimensional information", "3D"]
+  },
+  {
+    "id": "rag-018",
+    "question": "What future modeling direction does the paper suggest to address the limitation of 2D CT images?",
+    "expected_answer": "The paper suggests exploring 3D CNNs so models can use volumetric CT information.",
+    "category": "limitations",
+    "difficulty": "medium",
+    "expected_keywords": ["3D CNNs", "volumetric", "CT information"]
+  },
+  {
+    "id": "rag-019",
+    "question": "What data-related improvement does the paper recommend for future research?",
+    "expected_answer": "The paper recommends using larger datasets to improve future lung-cancer classification systems.",
+    "category": "limitations",
+    "difficulty": "easy",
+    "expected_keywords": ["larger datasets", "future research", "classification"]
+  },
+  {
+    "id": "rag-020",
+    "question": "According to the discussion, what practical challenges are associated with more advanced approaches such as 3D CNNs or Vision Transformers?",
+    "expected_answer": "The paper notes that these approaches have greater computational requirements and benefit from larger datasets.",
+    "category": "limitations",
+    "difficulty": "hard",
+    "expected_keywords": ["3D CNNs", "Vision Transformers", "computational requirements", "larger datasets"]
+  },
+  {
+    "id": "rag-021",
+    "question": "Why does the paper identify VGG16 as the best-performing architecture in this experiment?",
+    "expected_answer": "VGG16 was identified as best-performing because its 98.18% test accuracy was higher than MobileNetV2's 93.64%, ResNet50's 93.33%, and InceptionV3's 88.79%.",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "expected_keywords": ["VGG16", "98.18%", "MobileNetV2", "93.64%", "ResNet50", "93.33%", "InceptionV3", "88.79%"]
+  },
+  {
+    "id": "rag-022",
+    "question": "How do transfer learning and the three-class output design work together in the VGG16 approach?",
+    "expected_answer": "ImageNet pretraining supplies transferred visual features, and the adapted SoftMax output assigns each CT image to Normal, Benign, or Malignant.",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "expected_keywords": ["ImageNet", "transfer learning", "SoftMax", "Normal", "Benign", "Malignant"]
+  },
+  {
+    "id": "rag-023",
+    "question": "Why is Grad-CAM relevant when considering VGG16 for a diagnostic application, beyond its test-accuracy result?",
+    "expected_answer": "VGG16 had the highest reported accuracy, while Grad-CAM also shows the image regions influencing predictions; together these support performance assessment and interpretability for diagnostic use.",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "expected_keywords": ["VGG16", "98.18%", "Grad-CAM", "image regions", "interpretability"]
+  },
+  {
+    "id": "rag-024",
+    "question": "What balanced future direction follows from the paper's strong VGG16 result and its stated limitations?",
+    "expected_answer": "The paper supports VGG16 as the strongest evaluated 2D model, while recommending larger datasets and exploration of 3D CNNs; it also recognizes that advanced models can require more computation.",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "expected_keywords": ["VGG16", "largest accuracy", "larger datasets", "3D CNNs", "computational requirements"]
+  }
+]

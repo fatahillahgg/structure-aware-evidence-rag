@@ -1,0 +1,242 @@
+[
+  {
+    "id": "rag-001",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "question": "What was the main objective of the study?",
+    "answer": "I'm sorry, but the provided context does not include information about the main objective of the study.",
+    "retrieval_keyword_recall": 0.25,
+    "answer_keyword_recall": 0.0,
+    "answer_token_f1": 0.09999999999999999
+  },
+  {
+    "id": "rag-002",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "question": "What three classes were used for the lung CT images?",
+    "answer": "The three classes used for the lung CT images are Normal, Benign, and Malignant.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 1.0,
+    "answer_token_f1": 0.43478260869565216
+  },
+  {
+    "id": "rag-003",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "question": "Which CNN architectures were compared in the experiment?",
+    "answer": "The experiment compared the following CNN architectures: ResNet50, InceptionV3, MobileNetV2, and VGG16.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 1.0,
+    "answer_token_f1": 0.6666666666666666
+  },
+  {
+    "id": "rag-004",
+    "category": "direct_retrieval",
+    "difficulty": "easy",
+    "question": "Which pretrained dataset was used to initialize VGG16?",
+    "answer": "The VGG16 architecture was initialized with pre-trained weights from the ImageNet dataset.",
+    "retrieval_keyword_recall": 0.6666666666666666,
+    "answer_keyword_recall": 0.3333333333333333,
+    "answer_token_f1": 0.5
+  },
+  {
+    "id": "rag-005",
+    "category": "methodology",
+    "difficulty": "medium",
+    "question": "How was transfer learning applied to VGG16 in this study?",
+    "answer": "The VGG16 model was initialized with pre-trained weights from the ImageNet dataset, and then fine-tuned using the lung CT dataset.",
+    "retrieval_keyword_recall": 0.5,
+    "answer_keyword_recall": 0.25,
+    "answer_token_f1": 0.45
+  },
+  {
+    "id": "rag-006",
+    "category": "methodology",
+    "difficulty": "easy",
+    "question": "What loss function and optimizer were used to train VGG16?",
+    "answer": "The VGG16 model was trained using the **categorical cross-entropy loss function** and the **Adam optimizer**.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 1.0,
+    "answer_token_f1": 0.8275862068965517
+  },
+  {
+    "id": "rag-007",
+    "category": "methodology",
+    "difficulty": "medium",
+    "question": "What is the role of the SoftMax layer in the VGG16 model?",
+    "answer": "The SoftMax layer in the VGG16 model outputs a probability distribution, assigning a likelihood to each category. It converts logits into probabilities, ensuring the sum of probabilities equals 1. For instance, in medical imaging, it helps classify images into categories such as normal, benign, or malignant.",
+    "retrieval_keyword_recall": 0.8333333333333334,
+    "answer_keyword_recall": 0.8333333333333334,
+    "answer_token_f1": 0.32835820895522383
+  },
+  {
+    "id": "rag-008",
+    "category": "methodology",
+    "difficulty": "medium",
+    "question": "How does Grad-CAM contribute to the study's model evaluation?",
+    "answer": "Grad-CAM contributes to the study's model evaluation by generating heatmaps that highlight critical regions influencing the model's decisions within CT scan images. These visualizations allow radiologists and clinicians to validate the model's predictions, ensuring alignment with clinical observations and bridging the gap between AI predictions and clinician trust. For example, in cases classified as malignant, Grad-CAM identifies areas with significant pathological features like nodules or infiltrates. The heatmaps are overlaid on original CT images with bounding boxes annotated by radiologists to highlight known regions of interest.",
+    "retrieval_keyword_recall": 0.75,
+    "answer_keyword_recall": 0.5,
+    "answer_token_f1": 0.14814814814814817
+  },
+  {
+    "id": "rag-009",
+    "category": "results",
+    "difficulty": "easy",
+    "question": "Which model achieved the highest reported test accuracy?",
+    "answer": "VGG16 achieved the highest reported test accuracy of 98.18%.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 0.6666666666666666,
+    "answer_token_f1": 0.9
+  },
+  {
+    "id": "rag-010",
+    "category": "results",
+    "difficulty": "easy",
+    "question": "What test accuracy did MobileNetV2 achieve?",
+    "answer": "MobileNetV2 achieved a test accuracy of 93.33%.",
+    "retrieval_keyword_recall": 0.5,
+    "answer_keyword_recall": 0.5,
+    "answer_token_f1": 0.875
+  },
+  {
+    "id": "rag-011",
+    "category": "results",
+    "difficulty": "easy",
+    "question": "What test accuracy did ResNet50 achieve?",
+    "answer": "ResNet50 achieved a test accuracy of 93.33%.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 1.0,
+    "answer_token_f1": 1.0
+  },
+  {
+    "id": "rag-012",
+    "category": "results",
+    "difficulty": "easy",
+    "question": "What test accuracy did InceptionV3 achieve?",
+    "answer": "InceptionV3 achieved a test accuracy of 88.79%.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 1.0,
+    "answer_token_f1": 1.0
+  },
+  {
+    "id": "rag-013",
+    "category": "comparison",
+    "difficulty": "medium",
+    "question": "How did VGG16's test accuracy compare with MobileNetV2's?",
+    "answer": "VGG16 had a test accuracy of 98.18%, while MobileNetV2's test accuracy was 93.33%.",
+    "retrieval_keyword_recall": 0.6,
+    "answer_keyword_recall": 0.6,
+    "answer_token_f1": 0.39999999999999997
+  },
+  {
+    "id": "rag-014",
+    "category": "comparison",
+    "difficulty": "medium",
+    "question": "Rank the four evaluated architectures from highest to lowest test accuracy.",
+    "answer": "Based on test accuracy, the ranking from highest to lowest is:\n\n1.  **VGG16**: 93.33%\n2.  **MobileNetV2** and **ResNet50**: (The paper states they provide \"balanced options\" but does not give specific test accuracy numbers for them, only implying they are lower than VGG16 and higher than InceptionV3).\n3.  **InceptionV3**: 88.79%",
+    "retrieval_keyword_recall": 0.75,
+    "answer_keyword_recall": 0.75,
+    "answer_token_f1": 0.25
+  },
+  {
+    "id": "rag-015",
+    "category": "comparison",
+    "difficulty": "medium",
+    "question": "Which architecture performed worst in test accuracy, and how far behind VGG16 was it?",
+    "answer": "The provided text does not specify which architecture performed the worst in test accuracy. It only states that VGG16 had the highest test accuracy of 98.18%.",
+    "retrieval_keyword_recall": 0.6,
+    "answer_keyword_recall": 0.4,
+    "answer_token_f1": 0.26666666666666666
+  },
+  {
+    "id": "rag-016",
+    "category": "comparison",
+    "difficulty": "medium",
+    "question": "How close were MobileNetV2 and ResNet50 in test accuracy?",
+    "answer": "MobileNetV2 and ResNet50 had test accuracies of 93.33% and 93.33% respectively, making them equally close in test accuracy.",
+    "retrieval_keyword_recall": 0.6,
+    "answer_keyword_recall": 0.6,
+    "answer_token_f1": 0.4000000000000001
+  },
+  {
+    "id": "rag-017",
+    "category": "limitations",
+    "difficulty": "medium",
+    "question": "What limitation does the paper identify in using 2D CT images for classification?",
+    "answer": "The paper identifies that using 2D CT images for classification has several limitations:\n\n*   **Missing critical spatial and depth-related features:** 2D analysis captures only a single part of volumetric data, potentially missing important spatial and depth information needed to identify complex anatomical structures and subtle pathological changes (Source chunk 1).\n*   **Reduced sensitivity and specificity:** This constraint can reduce the model's ability to accurately detect and differentiate conditions, especially when tumor morphology or interstitial patterns extend across multiple planes (Source chunk 1).\n*   **May not perform as well as 3D or multi-view data:** 2D images may not perform as well as studies using three-dimensional or multi-view data (like CT and PET scans), which offer greater complexity and detail (Source chunk 3).\n*   **Constrained ability to capture depth-related features:** The reliance on 2D images may have limited the ability to capture depth-related features, unlike 3D CNNs which are advantageous for CT and PET scan analysis (Source chunk 4).",
+    "retrieval_keyword_recall": 0.5,
+    "answer_keyword_recall": 0.75,
+    "answer_token_f1": 0.1530054644808743
+  },
+  {
+    "id": "rag-018",
+    "category": "limitations",
+    "difficulty": "medium",
+    "question": "What future modeling direction does the paper suggest to address the limitation of 2D CT images?",
+    "answer": "The paper suggests that future research should explore integrating advanced architectures, such as Vision Transformers and hybrid models, which combine the strengths of convolutional layers with attention mechanisms. It also mentions exploring hybrid models that combine the efficiency of 2D analysis with the depth and spatial awareness of 3D approaches to address the limitations of 2D CT images.",
+    "retrieval_keyword_recall": 0.6666666666666666,
+    "answer_keyword_recall": 0.0,
+    "answer_token_f1": 0.19718309859154928
+  },
+  {
+    "id": "rag-019",
+    "category": "limitations",
+    "difficulty": "easy",
+    "question": "What data-related improvement does the paper recommend for future research?",
+    "answer": "The paper recommends that future research should explore advanced models, particularly 3D CNNs for capturing depth-related features and Vision Transformers for leveraging attention mechanisms.",
+    "retrieval_keyword_recall": 0.6666666666666666,
+    "answer_keyword_recall": 0.3333333333333333,
+    "answer_token_f1": 0.2105263157894737
+  },
+  {
+    "id": "rag-020",
+    "category": "limitations",
+    "difficulty": "hard",
+    "question": "According to the discussion, what practical challenges are associated with more advanced approaches such as 3D CNNs or Vision Transformers?",
+    "answer": "According to the discussion, practical challenges associated with more advanced approaches such as 3D CNNs or Vision Transformers include:\n\n*   **Higher computational demands:** These models require substantially more computational resources (Source chunk 2, 4).\n*   **Increased complexity:** Their complexity may limit practical applicability in resource-constrained clinical settings (Source chunk 2).\n*   **Larger datasets to train effectively:** 3D models specifically require larger datasets to train effectively (Source chunk 4).",
+    "retrieval_keyword_recall": 0.75,
+    "answer_keyword_recall": 0.75,
+    "answer_token_f1": 0.14814814814814814
+  },
+  {
+    "id": "rag-021",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "question": "Why does the paper identify VGG16 as the best-performing architecture in this experiment?",
+    "answer": "The paper identifies VGG16 as the best-performing architecture due to its superior accuracy and robustness in lung cancer image classification, as corroborated by existing literature and studies like Tejaswini et al. [4]. It is recommended for high-accuracy clinical applications.",
+    "retrieval_keyword_recall": 0.5,
+    "answer_keyword_recall": 0.125,
+    "answer_token_f1": 0.20289855072463767
+  },
+  {
+    "id": "rag-022",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "question": "How do transfer learning and the three-class output design work together in the VGG16 approach?",
+    "answer": "The VGG16 model utilizes transfer learning by initializing with pre-trained weights from the ImageNet dataset. This leverages the robust feature extraction capabilities developed on a large and diverse set of images. The model is then fine-tuned on the lung CT dataset to adapt it specifically for classifying lung abnormalities.\n\nThe three-class output design, consisting of \"normal,\" \"benign,\" and \"malignant\" categories, is integrated through the SoftMax layer. This layer outputs a probability distribution, assigning a likelihood to each of these three categories, enabling interpretable and accurate predictions for medical diagnosis. The categorical cross-entropy loss function is used to optimize the model's predictions, ensuring it effectively learns to distinguish between these three categories.",
+    "retrieval_keyword_recall": 1.0,
+    "answer_keyword_recall": 1.0,
+    "answer_token_f1": 0.16176470588235292
+  },
+  {
+    "id": "rag-023",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "question": "Why is Grad-CAM relevant when considering VGG16 for a diagnostic application, beyond its test-accuracy result?",
+    "answer": "I'm sorry, but this document does not contain the answer to this question. The provided text does not mention Grad-CAM.",
+    "retrieval_keyword_recall": 0.2,
+    "answer_keyword_recall": 0.2,
+    "answer_token_f1": 0.16666666666666669
+  },
+  {
+    "id": "rag-024",
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "question": "What balanced future direction follows from the paper's strong VGG16 result and its stated limitations?",
+    "answer": "The paper recommends incorporating three-dimensional or multi-view data in future studies to achieve greater diagnostic accuracy, building on VGG16's superior accuracy and robustness in lung cancer image classification, while addressing its current limitation of using only two-dimensional images.",
+    "retrieval_keyword_recall": 0.2,
+    "answer_keyword_recall": 0.2,
+    "answer_token_f1": 0.16901408450704225
+  }
+]
