@@ -1,6 +1,6 @@
 import unittest
 
-from context_evaluator import ContextEvaluation
+from context_evaluator import ContextEvaluation, SupportedAspect
 from retrieval_controller import choose_action
 
 
@@ -24,6 +24,20 @@ class RetrievalControllerTests(unittest.TestCase):
             attempt=0,
         )
         self.assertEqual(decision.action, "DECOMPOSE")
+
+    def test_confident_partial_evidence_answers_with_disclosure(self) -> None:
+        context = ContextEvaluation(
+            "partial",
+            [SupportedAspect("VGG16 accuracy", ["chunk-1"])],
+            ["CNN accuracy"],
+            [],
+            ["chunk-1"],
+            0.82,
+        )
+
+        decision = choose_action(context, "direct", attempt=0)
+
+        self.assertEqual(decision.action, "ANSWER")
 
     def test_conflicting_rewritten_evidence_retries_direct(self) -> None:
         decision = choose_action(evaluation("conflicting"), "rewrite", attempt=0)

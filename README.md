@@ -111,7 +111,7 @@ The retrieval controller consumes that assessment and chooses one bounded action
 Run the final answer-quality evaluation through the controller:
 
 ```bash
-uv run python evaluate.py --query-mode analyzer --output-dir data/evaluation/runs/final-controller
+uv run python evaluate.py --query-mode analyzer --output-dir data/evaluation/runs/final-controller-calibrated
 ```
 
 ## Observability

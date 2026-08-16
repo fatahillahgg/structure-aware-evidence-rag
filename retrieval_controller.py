@@ -30,6 +30,16 @@ def choose_action(
     if evaluation.status == "sufficient" and evaluation.confidence >= 0.65:
         return ControllerDecision("ANSWER", "evidence is sufficient and confident")
 
+    if (
+        evaluation.status == "partial"
+        and evaluation.confidence >= 0.75
+        and evaluation.supported_aspects
+    ):
+        return ControllerDecision(
+            "ANSWER",
+            "evidence supports a grounded partial answer; disclose missing aspects",
+        )
+
     if attempt >= max_attempts:
         return ControllerDecision("ABSTAIN", "corrective retrieval budget exhausted")
 

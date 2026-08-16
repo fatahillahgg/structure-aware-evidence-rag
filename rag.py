@@ -18,7 +18,8 @@ from retrieval_controller import ControllerDecision, choose_action
 SYSTEM_PROMPT = """You answer questions about the supplied research paper.
 Use only the context provided below. If the answer is not in the context, say
 that you do not have enough information in the paper. Do not invent facts.
-Cite supporting context chunks using [Source chunk N].
+Cite supporting context chunks using [Source chunk N]. If the context assessment
+is partial, answer the supported part and briefly disclose what is missing.
 Keep the answer concise and mention relevant numbers when available."""
 
 QUERY_REWRITE_PROMPT = """You rewrite user questions for retrieval from one research paper.
