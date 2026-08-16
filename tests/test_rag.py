@@ -5,6 +5,7 @@ from langchain_core.documents import Document
 
 from query_analyzer import analyze_query
 from rag import answer_question, rewrite_query
+from retrieval_controller import ControllerDecision
 
 
 class QueryAnalyzerTests(unittest.TestCase):
@@ -53,7 +54,11 @@ class QueryRewriteTests(unittest.TestCase):
         with patch("rag.create_llm", return_value=llm):
             with patch("rag.retrieve", return_value=retrieved) as retrieve_mock:
                 with patch("rag.evaluate_context"):
-                    answer = answer_question("How did it perform?", k=1)
+                    with patch(
+                        "rag.choose_action",
+                        return_value=ControllerDecision("ANSWER", "test"),
+                    ):
+                        answer = answer_question("How did it perform?", k=1)
 
         retrieve_mock.assert_called_once_with(
             "VGG16 classification accuracy", k=1, index_path=unittest.mock.ANY
@@ -69,14 +74,18 @@ class QueryRewriteTests(unittest.TestCase):
         with patch("rag.create_llm", return_value=llm):
             with patch("rag.retrieve", return_value=retrieved) as retrieve_mock:
                 with patch("rag.evaluate_context"):
-                    answer_question("What accuracy did VGG16 achieve?", k=1)
+                    with patch(
+                        "rag.choose_action",
+                        return_value=ControllerDecision("ANSWER", "test"),
+                    ):
+                        answer_question("What accuracy did VGG16 achieve?", k=1)
 
         retrieve_mock.assert_called_once_with(
             "What accuracy did VGG16 achieve?", k=1, index_path=unittest.mock.ANY
         )
         self.assertEqual(llm.invoke.call_count, 1)
 
-    def test_direct_retrieval_falls_back_to_rewrite_for_low_score(self) -> None:
+    def test_controller_can_route_direct_retrieval_to_rewrite(self) -> None:
         llm = Mock()
         llm.invoke.side_effect = [
             Mock(content="VGG16 classification accuracy"),
@@ -88,7 +97,14 @@ class QueryRewriteTests(unittest.TestCase):
         with patch("rag.create_llm", return_value=llm):
             with patch("rag.retrieve", side_effect=[retrieved, fallback]) as retrieve_mock:
                 with patch("rag.evaluate_context"):
-                    answer_question("What accuracy did VGG16 achieve?", k=1)
+                    with patch(
+                        "rag.choose_action",
+                        side_effect=[
+                            ControllerDecision("REWRITE", "test"),
+                            ControllerDecision("ANSWER", "test"),
+                        ],
+                    ):
+                        answer_question("What accuracy did VGG16 achieve?", k=1)
 
         self.assertEqual(retrieve_mock.call_count, 2)
         self.assertEqual(llm.invoke.call_count, 2)

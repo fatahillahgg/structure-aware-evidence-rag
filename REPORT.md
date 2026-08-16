@@ -30,6 +30,7 @@ Retrieved context is sent to Gemini through OpenRouter to generate grounded answ
 - Added low-score retrieval fallback from direct search to rewriting.
 - Added evidence normalization and exact/near-duplicate removal after reranking.
 - Added context sufficiency evaluation with sufficient, partial, insufficient, and conflicting statuses.
+- Added a bounded retrieval controller with ANSWER, REWRITE, EXPAND, DECOMPOSE, RETRY_DIRECT, and ABSTAIN actions.
 - Added source chunk citations to generated answers.
 - Added semantic answer similarity evaluation using the local embedding model.
 - Added optional structured JSONL observability with per-request trace IDs and stage timings.
@@ -67,17 +68,18 @@ rag_paper/
 2. Direct retrieval can fall back to rewriting when the top reranker score is low.
 3. Reranked candidates are normalized and deduplicated before context evaluation.
 4. The context evaluator reports supported, missing, conflicting, and relevant evidence IDs.
-5. The selected retrieval query is embedded with the same MiniLM model used for document chunks.
-6. FAISS returns dense semantic matches.
-7. BM25 returns lexical matches based on terms in the selected query.
-8. RRF merges both ranked lists using:
+5. The controller selects a bounded corrective action from the evaluator result.
+6. The selected retrieval query is embedded with the same MiniLM model used for document chunks.
+7. FAISS returns dense semantic matches.
+8. BM25 returns lexical matches based on terms in the selected query.
+9. RRF merges both ranked lists using:
 
    ```text
    RRF score = 1 / (60 + rank)
    ```
 
-9. The fused candidates are reranked by `cross-encoder/ms-marco-MiniLM-L-6-v2` using query-chunk relevance scores.
-10. The highest-ranked reranked chunks are passed to the language model with source chunk labels.
+10. The fused candidates are reranked by `cross-encoder/ms-marco-MiniLM-L-6-v2` using query-chunk relevance scores.
+11. The highest-ranked reranked chunks are passed to the language model with source chunk labels.
 
 ## Evaluation
 

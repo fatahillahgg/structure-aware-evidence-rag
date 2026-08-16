@@ -12,12 +12,13 @@ from context_evaluator import ContextEvaluation, evaluate_context
 from observability import trace_event, trace_request, trace_span
 from query_analyzer import analyze_query
 from retrieval import DEFAULT_INDEX_PATH, deduplicate_evidence, rerank, retrieve
+from retrieval_controller import ControllerDecision, choose_action
 
 
 SYSTEM_PROMPT = """You answer questions about the supplied research paper.
 Use only the context provided below. If the answer is not in the context, say
- that you do not have enough information in the paper. Do not invent facts.
- Cite supporting context chunks using [Source chunk N].
+that you do not have enough information in the paper. Do not invent facts.
+Cite supporting context chunks using [Source chunk N].
 Keep the answer concise and mention relevant numbers when available."""
 
 QUERY_REWRITE_PROMPT = """You rewrite user questions for retrieval from one research paper.
@@ -31,7 +32,12 @@ Return 2 or 3 concise standalone retrieval questions, one per line.
 Preserve model names, metrics, numbers, and technical terms. Do not answer them.
 Return only the questions, with no numbering or explanation."""
 
-RETRIEVAL_SCORE_THRESHOLD = 0.0
+QUERY_EXPAND_PROMPT = """You create alternative search queries for one research paper question.
+Return 2 or 3 concise queries, one per line. Use different terminology while
+preserving model names, metrics, numbers, and technical terms. Do not answer.
+Return only the queries, with no numbering or explanation."""
+
+MAX_CORRECTIVE_ATTEMPTS = 2
 
 
 @lru_cache(maxsize=1)
@@ -118,6 +124,25 @@ def decompose_query(question: str, history: Sequence[object] | None = None) -> l
     return selected
 
 
+def expand_query(question: str, history: Sequence[object] | None = None) -> list[str]:
+    """Generate alternative retrieval queries for corrective retrieval."""
+    history_context = _history_text(history)
+    human_message = (
+        f"Conversation history:\n{history_context}\n\nCurrent question: {question}"
+        if history_context
+        else question
+    )
+    with trace_span("query_expand", has_history=bool(history)):
+        response = create_llm().invoke(
+            [("system", QUERY_EXPAND_PROMPT), ("human", human_message)]
+        )
+    queries = [line.strip(" -\t") for line in str(response.content).splitlines()]
+    queries = [query for query in queries if query]
+    selected = list(dict.fromkeys(queries[:3] or [question.strip()]))
+    trace_event("query_expanded", query_count=len(selected), queries=selected)
+    return selected
+
+
 def _merge_results(
     question: str,
     query_results: list[list[tuple[object, float]]],
@@ -157,6 +182,36 @@ def _format_context(results: list[tuple[object, float]]) -> str:
     return "\n\n---\n\n".join(formatted)
 
 
+def _retrieve_for_mode(
+    question: str,
+    mode: str,
+    k: int,
+    index_path: str | Path,
+    history: Sequence[object] | None,
+) -> list[tuple[object, float]]:
+    if mode == "direct":
+        return retrieve(question.strip(), k=k, index_path=index_path)
+    if mode == "rewrite":
+        return retrieve(rewrite_query(question, history=history), k=k, index_path=index_path)
+    if mode == "decompose":
+        queries = decompose_query(question, history=history)
+    elif mode == "expand":
+        queries = expand_query(question, history=history)
+    else:
+        raise ValueError(f"unknown retrieval mode: {mode}")
+
+    return _merge_results(
+        question,
+        [retrieve(query, k=k, index_path=index_path) for query in queries],
+        k=k,
+    )
+
+
+def _abstention_message(evaluation: ContextEvaluation) -> str:
+    missing = ", ".join(evaluation.missing_aspects) or "the requested details"
+    return f"I do not have enough reliable evidence in the paper to answer this fully. Missing: {missing}."
+
+
 def _answer_question(
     question: str,
     k: int = 4,
@@ -165,45 +220,36 @@ def _answer_question(
     history: Sequence[object] | None = None,
 ) -> str:
     """Retrieve paper context and generate a grounded answer."""
-    if retrieval_query is None:
-        query_mode = analyze_query(question, history=history)
-        trace_event("retrieval_route_selected", mode=query_mode)
-        if query_mode == "decompose":
-            subqueries = decompose_query(question, history=history)
-            results = _merge_results(
-                question,
-                [retrieve(subquery, k=k, index_path=index_path) for subquery in subqueries],
-                k=k,
-            )
-        else:
-            retrieval_query = (
-                rewrite_query(question, history=history)
-                if query_mode == "rewrite"
-                else question.strip()
-            )
-            results = retrieve(retrieval_query, k=k, index_path=index_path)
-            if (
-                query_mode == "direct"
-                and results
-                and results[0][1] < RETRIEVAL_SCORE_THRESHOLD
-            ):
-                fallback_query = rewrite_query(question, history=history)
-                fallback_results = retrieve(fallback_query, k=k, index_path=index_path)
-                if fallback_results and fallback_results[0][1] > results[0][1]:
-                    trace_event(
-                        "retrieval_fallback_used",
-                        original_score=results[0][1],
-                        fallback_score=fallback_results[0][1],
-                    )
-                    results = fallback_results
-    else:
-        results = retrieve(retrieval_query, k=k, index_path=index_path)
-
-    context_evaluation: ContextEvaluation = evaluate_context(
-        question,
-        results,
-        llm=create_llm(),
+    current_mode = analyze_query(question, history=history) if retrieval_query is None else "direct"
+    trace_event("retrieval_route_selected", mode=current_mode)
+    results = (
+        retrieve(retrieval_query, k=k, index_path=index_path)
+        if retrieval_query is not None
+        else _retrieve_for_mode(question, current_mode, k, index_path, history)
     )
+
+    context_evaluation: ContextEvaluation
+    decision: ControllerDecision
+    for attempt in range(MAX_CORRECTIVE_ATTEMPTS + 1):
+        context_evaluation = evaluate_context(question, results, llm=create_llm())
+        decision = choose_action(context_evaluation, current_mode, attempt)
+        trace_event(
+            "retrieval_controller_decision",
+            action=decision.action,
+            reason=decision.reason,
+            attempt=attempt,
+            mode=current_mode,
+            status=context_evaluation.status,
+            confidence=context_evaluation.confidence,
+        )
+        if decision.action == "ANSWER":
+            break
+        if decision.action == "ABSTAIN":
+            trace_event("answer_abstained", reason=decision.reason)
+            return _abstention_message(context_evaluation)
+        current_mode = decision.action.lower()
+        results = _retrieve_for_mode(question, current_mode, k, index_path, history)
+
     context = _format_context(results)
 
     trace_event(

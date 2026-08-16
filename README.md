@@ -104,7 +104,9 @@ Baseline retrieval after evidence deduplication:
 - Direct query: **72.4%** retrieval keyword recall
 - Rewritten query: **74.1%** retrieval keyword recall
 
-The context sufficiency evaluator runs after normalized evidence selection and records `sufficient`, `partial`, `insufficient`, or `conflicting` assessments in the trace. It does not yet trigger corrective retrieval or abstention.
+The context sufficiency evaluator runs after normalized evidence selection and records `sufficient`, `partial`, `insufficient`, or `conflicting` assessments in the trace. The retrieval controller uses these assessments to trigger bounded corrective retrieval or abstention.
+
+The retrieval controller consumes that assessment and chooses one bounded action: `ANSWER`, `REWRITE`, `EXPAND`, `DECOMPOSE`, `RETRY_DIRECT`, or `ABSTAIN`. Corrective retrieval is limited to two attempts per request.
 
 ## Observability
 
