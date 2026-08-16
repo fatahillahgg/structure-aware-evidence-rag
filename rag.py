@@ -247,7 +247,7 @@ def _answer_question(
         if decision.action == "ABSTAIN":
             trace_event("answer_abstained", reason=decision.reason)
             return _abstention_message(context_evaluation)
-        current_mode = decision.action.lower()
+        current_mode = "direct" if decision.action == "RETRY_DIRECT" else decision.action.lower()
         results = _retrieve_for_mode(question, current_mode, k, index_path, history)
 
     context = _format_context(results)

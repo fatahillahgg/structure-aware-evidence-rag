@@ -74,6 +74,10 @@ def has_source_citation(answer: str) -> bool:
     return bool(re.search(r"\[Source chunk \d+\]", answer))
 
 
+def is_abstention(answer: str) -> bool:
+    return answer.startswith("I do not have enough reliable evidence")
+
+
 def evaluate_item(
     item: dict[str, Any],
     k: int,
@@ -130,6 +134,7 @@ def evaluate_item(
             semantic_similarity(answer, item["expected_answer"]) if generate else None
         ),
         "answer_has_citation": has_source_citation(answer) if generate else None,
+        "answer_abstained": is_abstention(answer) if generate else None,
     }
 
 
@@ -228,6 +233,9 @@ def main() -> None:
         )
         citation_values = [row["answer_has_citation"] for row in rows if row["answer_has_citation"] is not None]
         print(f"Answers with citations: {sum(citation_values) / len(citation_values):.1%}")
+        abstention_values = [row["answer_abstained"] for row in rows if row["answer_abstained"] is not None]
+        print(f"Answer rate: {1 - (sum(abstention_values) / len(abstention_values)):.1%}")
+        print(f"Abstention rate: {sum(abstention_values) / len(abstention_values):.1%}")
     print(f"Chart: {chart_path}")
     print(f"Results: {results_path}")
 

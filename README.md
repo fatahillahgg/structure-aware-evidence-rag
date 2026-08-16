@@ -108,6 +108,12 @@ The context sufficiency evaluator runs after normalized evidence selection and r
 
 The retrieval controller consumes that assessment and chooses one bounded action: `ANSWER`, `REWRITE`, `EXPAND`, `DECOMPOSE`, `RETRY_DIRECT`, or `ABSTAIN`. Corrective retrieval is limited to two attempts per request.
 
+Run the final answer-quality evaluation through the controller:
+
+```bash
+uv run python evaluate.py --query-mode analyzer --output-dir data/evaluation/runs/final-controller
+```
+
 ## Observability
 
 Enable structured JSONL tracing by setting `RAG_TRACE_PATH` in `.env`:

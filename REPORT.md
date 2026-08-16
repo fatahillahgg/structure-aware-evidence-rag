@@ -110,6 +110,21 @@ Generated files:
 
 The latest structure-aware full evaluation is stored under `data/evaluation/runs/structure-aware-analyzer-full/`.
 
+Final answer-quality evaluation through the retrieval controller:
+
+- Questions evaluated: **30**.
+- Retrieval keyword recall: **77.3%**.
+- Answer keyword recall: **63.3%** overall.
+- Answer token F1: **24.0%** overall.
+- Answer semantic similarity: **64.6%** overall.
+- Answer rate: **70.0%** (21 of 30 questions).
+- Abstention rate: **30.0%** (9 of 30 questions).
+- Citation coverage among answered questions: **100.0%**.
+
+Among the 21 answered questions, answer keyword recall was **78.6%**, token F1 **28.8%**, and semantic similarity **72.7%**. The overall scores include abstentions as unanswered cases. This is the current answer-quality result, not a direct user survey score.
+
+Results: `data/evaluation/runs/final-controller/`.
+
 Baseline retrieval after evidence deduplication:
 
 - Direct query: **72.4%** retrieval keyword recall.
