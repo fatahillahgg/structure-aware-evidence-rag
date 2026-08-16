@@ -1,17 +1,23 @@
 import argparse
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
+from typing import Sequence
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
-from retrieval import DEFAULT_INDEX_PATH, retrieve
+from context_evaluator import ContextEvaluation, evaluate_context
+from observability import trace_event, trace_request, trace_span
+from query_analyzer import analyze_query
+from retrieval import DEFAULT_INDEX_PATH, deduplicate_evidence, rerank, retrieve
 
 
 SYSTEM_PROMPT = """You answer questions about the supplied research paper.
 Use only the context provided below. If the answer is not in the context, say
-that you do not have enough information in the paper. Do not invent facts.
+ that you do not have enough information in the paper. Do not invent facts.
+ Cite supporting context chunks using [Source chunk N].
 Keep the answer concise and mention relevant numbers when available."""
 
 QUERY_REWRITE_PROMPT = """You rewrite user questions for retrieval from one research paper.
@@ -19,6 +25,13 @@ Convert the question into one concise, standalone search query.
 Resolve conversational references when possible, preserve model names, metrics,
 numbers, and technical terms, and do not answer the question.
 Return only the rewritten query, with no explanation."""
+
+QUERY_DECOMPOSE_PROMPT = """You decompose a multi-part question about one research paper.
+Return 2 or 3 concise standalone retrieval questions, one per line.
+Preserve model names, metrics, numbers, and technical terms. Do not answer them.
+Return only the questions, with no numbering or explanation."""
+
+RETRIEVAL_SCORE_THRESHOLD = 0.0
 
 
 @lru_cache(maxsize=1)
@@ -41,19 +54,176 @@ def create_llm() -> ChatOpenAI:
     )
 
 
-def rewrite_query(question: str) -> str:
+def _history_text(history: Sequence[object] | None) -> str:
+    if not history:
+        return ""
+
+    messages: list[str] = []
+    for item in history[-6:]:
+        if isinstance(item, dict):
+            role = str(item.get("role", "user"))
+            content = item.get("content", "")
+            if isinstance(content, list):
+                content = " ".join(
+                    str(block.get("text", ""))
+                    for block in content
+                    if isinstance(block, dict) and block.get("type") == "text"
+                )
+            messages.append(f"{role}: {content}")
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            messages.extend((f"user: {item[0]}", f"assistant: {item[1]}"))
+
+    return "\n".join(messages)
+
+
+def rewrite_query(question: str, history: Sequence[object] | None = None) -> str:
     """Rewrite a user question into a standalone retrieval query."""
     if not question.strip():
         raise ValueError("question must not be empty")
 
-    response = create_llm().invoke(
-        [
-            ("system", QUERY_REWRITE_PROMPT),
-            ("human", question),
-        ]
+    history_context = _history_text(history)
+    human_message = (
+        f"Conversation history:\n{history_context}\n\nCurrent question: {question}"
+        if history_context
+        else question
     )
+    with trace_span("query_rewrite", has_history=bool(history)):
+        response = create_llm().invoke(
+            [
+                ("system", QUERY_REWRITE_PROMPT),
+                ("human", human_message),
+            ]
+        )
     rewritten = str(response.content).strip()
+    trace_event("query_rewritten", query=rewritten)
     return rewritten or question.strip()
+
+
+def decompose_query(question: str, history: Sequence[object] | None = None) -> list[str]:
+    """Split a multi-part question into standalone retrieval queries."""
+    history_context = _history_text(history)
+    human_message = (
+        f"Conversation history:\n{history_context}\n\nCurrent question: {question}"
+        if history_context
+        else question
+    )
+    with trace_span("query_decompose", has_history=bool(history)):
+        response = create_llm().invoke(
+            [("system", QUERY_DECOMPOSE_PROMPT), ("human", human_message)]
+        )
+    queries = [line.strip(" -\t") for line in str(response.content).splitlines()]
+    queries = [query for query in queries if query]
+    selected = queries[:3] or [question.strip()]
+    trace_event("query_decomposed", subquery_count=len(selected), subqueries=selected)
+    return selected
+
+
+def _merge_results(
+    question: str,
+    query_results: list[list[tuple[object, float]]],
+    k: int,
+) -> list[tuple[object, float]]:
+    candidates: dict[str, tuple[object, float]] = {}
+    for results in query_results:
+        for document, score in results:
+            key = document.page_content
+            if key not in candidates or score > candidates[key][1]:
+                candidates[key] = (document, score)
+    reranked = rerank(question, list(candidates.values()), k=len(candidates))
+    merged = deduplicate_evidence(reranked, k=k)
+    trace_event(
+        "evidence_merged",
+        input_result_count=sum(len(results) for results in query_results),
+        unique_candidate_count=len(candidates),
+        output_result_count=len(merged),
+    )
+    return merged
+
+
+def _ensure_citation(answer: str, source_count: int) -> str:
+    if re.search(r"\[Source chunk \d+\]", answer):
+        return answer
+    sources = ", ".join(f"[Source chunk {number}]" for number in range(1, source_count + 1))
+    return f"{answer}\n\nSources: {sources}" if sources else answer
+
+
+def _format_context(results: list[tuple[object, float]]) -> str:
+    formatted: list[str] = []
+    for number, (document, _) in enumerate(results, start=1):
+        section_path = " > ".join(document.metadata.get("section_path", []))
+        chunk_id = document.metadata.get("chunk_id", f"chunk-{number}")
+        source_label = f"[Source chunk {number}; {chunk_id}; section: {section_path}]"
+        formatted.append(f"{source_label}\n{document.page_content}")
+    return "\n\n---\n\n".join(formatted)
+
+
+def _answer_question(
+    question: str,
+    k: int = 4,
+    index_path: str | Path = DEFAULT_INDEX_PATH,
+    retrieval_query: str | None = None,
+    history: Sequence[object] | None = None,
+) -> str:
+    """Retrieve paper context and generate a grounded answer."""
+    if retrieval_query is None:
+        query_mode = analyze_query(question, history=history)
+        trace_event("retrieval_route_selected", mode=query_mode)
+        if query_mode == "decompose":
+            subqueries = decompose_query(question, history=history)
+            results = _merge_results(
+                question,
+                [retrieve(subquery, k=k, index_path=index_path) for subquery in subqueries],
+                k=k,
+            )
+        else:
+            retrieval_query = (
+                rewrite_query(question, history=history)
+                if query_mode == "rewrite"
+                else question.strip()
+            )
+            results = retrieve(retrieval_query, k=k, index_path=index_path)
+            if (
+                query_mode == "direct"
+                and results
+                and results[0][1] < RETRIEVAL_SCORE_THRESHOLD
+            ):
+                fallback_query = rewrite_query(question, history=history)
+                fallback_results = retrieve(fallback_query, k=k, index_path=index_path)
+                if fallback_results and fallback_results[0][1] > results[0][1]:
+                    trace_event(
+                        "retrieval_fallback_used",
+                        original_score=results[0][1],
+                        fallback_score=fallback_results[0][1],
+                    )
+                    results = fallback_results
+    else:
+        results = retrieve(retrieval_query, k=k, index_path=index_path)
+
+    context_evaluation: ContextEvaluation = evaluate_context(
+        question,
+        results,
+        llm=create_llm(),
+    )
+    context = _format_context(results)
+
+    trace_event(
+        "context_selected",
+        chunk_count=len(results),
+        top_score=results[0][1] if results else None,
+    )
+    with trace_span("answer_generation", chunk_count=len(results)):
+        response = create_llm().invoke(
+            [
+                ("system", SYSTEM_PROMPT),
+                (
+                    "human",
+                    "Context sufficiency assessment:\n"
+                    f"{context_evaluation.to_dict()}\n\n"
+                    f"Context from the paper:\n\n{context}\n\nQuestion: {question}",
+                ),
+            ]
+        )
+    return _ensure_citation(str(response.content), len(results))
 
 
 def answer_question(
@@ -61,25 +231,17 @@ def answer_question(
     k: int = 4,
     index_path: str | Path = DEFAULT_INDEX_PATH,
     retrieval_query: str | None = None,
+    history: Sequence[object] | None = None,
 ) -> str:
-    """Retrieve paper context and generate a grounded answer."""
-    rewritten_question = retrieval_query or rewrite_query(question)
-    results = retrieve(rewritten_question, k=k, index_path=index_path)
-    context = "\n\n---\n\n".join(
-        f"Source chunk {number}:\n{document.page_content}"
-        for number, (document, _) in enumerate(results, start=1)
-    )
-
-    response = create_llm().invoke(
-        [
-            ("system", SYSTEM_PROMPT),
-            (
-                "human",
-                f"Context from the paper:\n\n{context}\n\nQuestion: {question}",
-            ),
-        ]
-    )
-    return str(response.content)
+    """Trace and answer one grounded question."""
+    with trace_request(question):
+        return _answer_question(
+            question,
+            k=k,
+            index_path=index_path,
+            retrieval_query=retrieval_query,
+            history=history,
+        )
 
 
 if __name__ == "__main__":

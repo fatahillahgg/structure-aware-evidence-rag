@@ -9,7 +9,7 @@ from embedder import create_embedder
 from loader import load_paper
 
 
-DEFAULT_INDEX_PATH = Path(__file__).parent / "data" / "faiss_index"
+DEFAULT_INDEX_PATH = Path(__file__).parent / "data" / "indexes" / "faiss"
 
 
 def build_vector_store(

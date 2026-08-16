@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 import yaml
 
 
-DEFAULT_DOCUMENT = Path(__file__).parent / "data" / "cleaned_paper.md"
+DEFAULT_DOCUMENT = Path(__file__).parent / "data" / "processed" / "cleaned_paper.md"
 
 
 def load_paper(path: str | Path = DEFAULT_DOCUMENT) -> list[Document]:

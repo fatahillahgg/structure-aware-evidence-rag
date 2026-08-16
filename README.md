@@ -15,7 +15,7 @@ If Hugging Face requires authentication when downloading the reranker, also add 
 
 ## Load the Cleaned Paper
 
-Citra was used to extract the PDF into `data/cleaned_paper.md`, removing PDF layout noise before LangChain reads it.
+Citra was used to extract the PDF into `data/processed/cleaned_paper.md`, removing PDF layout noise before LangChain reads it. The original PDF is kept in `data/raw/`.
 
 ```bash
 uv run python loader.py
@@ -29,7 +29,7 @@ The loader returns the full paper as a LangChain `Document` and converts the YAM
 uv run python chunker.py
 ```
 
-The chunker uses `RecursiveCharacterTextSplitter` with 1,000-character chunks and 200-character overlap.
+The chunker first follows the Markdown heading hierarchy, then uses `RecursiveCharacterTextSplitter` within each section with 1,000-character chunks and 200-character overlap. Each chunk keeps document metadata plus `chunk_id`, section path, section level, content type, and character offsets.
 
 ## Create Embeddings
 
@@ -45,7 +45,7 @@ This uses the open-source `sentence-transformers/all-MiniLM-L6-v2` model locally
 uv run python vector_store.py
 ```
 
-This persists the chunk embeddings and metadata under `data/faiss_index/`. The generated index is ignored by git and can be rebuilt from the cleaned Markdown source.
+This persists the chunk embeddings and metadata under `data/indexes/faiss/`. The generated index is ignored by git and can be rebuilt from the cleaned Markdown source.
 
 ## Retrieve Relevant Chunks
 
@@ -59,7 +59,7 @@ Use `retrieve()` when scores and document metadata are needed, or `build_context
 
 ## Ask Questions With Naive RAG
 
-The RAG flow first rewrites the user query for retrieval, then combines dense FAISS search and sparse BM25 search with Reciprocal Rank Fusion (RRF), reranks the candidates with a local CrossEncoder, and sends the top chunks as context to Gemini through OpenRouter:
+The RAG flow first analyzes the user query. Standalone questions use direct retrieval, context-dependent questions use history-aware rewriting, and multi-part questions are decomposed. The selected queries are sent to dense FAISS search and sparse BM25 search, combined with Reciprocal Rank Fusion (RRF), reranked with a local CrossEncoder, normalized and deduplicated, evaluated for context sufficiency, and sent as cited context to Gemini through OpenRouter:
 
 ```bash
 uv run python rag.py "What accuracy did VGG16 achieve?"
@@ -77,19 +77,46 @@ Open `http://127.0.0.1:7860` in your browser. The app uses the same FAISS index 
 
 ## Evaluate Performance
 
-Run the full evaluation against `data/eval.json`:
+Run the full evaluation against `data/evaluation/dataset.json`:
 
 ```bash
 uv run python evaluate.py
 ```
 
-This generates `data/evaluation/naive_rag_performance.png` and `data/evaluation/results.json`. To evaluate retrieval without making OpenRouter calls:
+This generates results under `data/evaluation/latest/`. To evaluate retrieval without answer-generation calls (rewrite-routed questions may still call OpenRouter):
 
 ```bash
 uv run python evaluate.py --retrieval-only
 ```
 
-The retriever combines dense FAISS similarity and sparse BM25 rankings with RRF, then applies `cross-encoder/ms-marco-MiniLM-L-6-v2` to rerank the candidate chunks. The evaluation command prints the current scores for the 24-question dataset; generation scores can vary slightly between model responses.
+Compare direct retrieval with query rewriting:
+
+```bash
+uv run python evaluate.py --retrieval-only --query-mode direct --output-dir data/evaluation/runs/direct
+uv run python evaluate.py --retrieval-only --query-mode rewrite --output-dir data/evaluation/runs/rewrite
+uv run python evaluate.py --retrieval-only --query-mode analyzer --output-dir data/evaluation/runs/analyzer
+```
+
+The retriever combines dense FAISS similarity and sparse BM25 rankings with RRF, then applies `cross-encoder/ms-marco-MiniLM-L-6-v2` to rerank the candidate chunks. The evaluation command prints the current scores for the 30-question dataset; generation scores can vary slightly between model responses.
+
+Baseline retrieval after evidence deduplication:
+
+- Direct query: **72.4%** retrieval keyword recall
+- Rewritten query: **74.1%** retrieval keyword recall
+
+The context sufficiency evaluator runs after normalized evidence selection and records `sufficient`, `partial`, `insufficient`, or `conflicting` assessments in the trace. It does not yet trigger corrective retrieval or abstention.
+
+## Observability
+
+Enable structured JSONL tracing by setting `RAG_TRACE_PATH` in `.env`:
+
+```env
+RAG_TRACE_PATH=data/traces/rag.jsonl
+```
+
+Each request records a `trace_id`, query route, rewrite/decomposition timing, dense and BM25 retrieval timing, reranking, fallback usage, selected context, answer generation timing, and request duration. Tracing is disabled when `RAG_TRACE_PATH` is empty or unset.
+
+Analyzer routing accuracy and results are stored under `data/evaluation/runs/analyzer/`.
 
 Run the network-free unit tests:
 

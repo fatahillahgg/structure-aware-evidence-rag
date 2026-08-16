@@ -1,4 +1,5 @@
 import re
+from difflib import SequenceMatcher
 from functools import lru_cache
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from sentence_transformers import CrossEncoder
 
 from chunker import chunk_documents
 from loader import load_paper
+from observability import trace_event, trace_span
 from vector_store import DEFAULT_INDEX_PATH, load_vector_store
 
 
@@ -85,6 +87,53 @@ def rerank(
     return sorted(reranked, key=lambda item: item[1], reverse=True)[:k]
 
 
+def normalize_evidence_text(text: str) -> str:
+    """Normalize evidence text for duplicate comparison without changing its source."""
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def deduplicate_evidence(
+    candidates: list[tuple[Document, float]],
+    k: int,
+    similarity_threshold: float = 0.92,
+) -> list[tuple[Document, float]]:
+    """Remove exact and near-duplicate evidence while preserving rank order."""
+    if k < 1:
+        raise ValueError("k must be at least 1")
+    if not 0 < similarity_threshold <= 1:
+        raise ValueError("similarity_threshold must be greater than 0 and at most 1")
+
+    kept: list[tuple[Document, float]] = []
+    normalized_kept: list[str] = []
+    duplicate_count = 0
+    for document, score in candidates:
+        normalized = normalize_evidence_text(document.page_content)
+        if not normalized:
+            duplicate_count += 1
+            continue
+        is_duplicate = any(
+            normalized == previous
+            or SequenceMatcher(None, normalized, previous).ratio() >= similarity_threshold
+            for previous in normalized_kept
+        )
+        if is_duplicate:
+            duplicate_count += 1
+            continue
+        kept.append((document, score))
+        normalized_kept.append(normalized)
+        if len(kept) >= k:
+            break
+
+    trace_event(
+        "evidence_deduplicated",
+        input_count=len(candidates),
+        output_count=len(kept),
+        duplicate_count=duplicate_count,
+        similarity_threshold=similarity_threshold,
+    )
+    return kept
+
+
 def hybrid_retrieve(
     query: str,
     k: int = 4,
@@ -101,14 +150,23 @@ def hybrid_retrieve(
         raise ValueError("rrf_k must be at least 1")
 
     candidates = max(k, candidate_k or max(10, k * 3))
-    fused = reciprocal_rank_fusion(
-        [
-            dense_retrieve(query, k=candidates, index_path=index_path),
-            bm25_retrieve(query, k=candidates),
-        ],
-        k=rrf_k,
+    with trace_span("dense_retrieval", k=candidates):
+        dense_results = dense_retrieve(query, k=candidates, index_path=index_path)
+    with trace_span("bm25_retrieval", k=candidates):
+        sparse_results = bm25_retrieve(query, k=candidates)
+    fused = reciprocal_rank_fusion([dense_results, sparse_results], k=rrf_k)
+    with trace_span("cross_encoder_rerank", candidate_count=len(fused), k=len(fused)):
+        reranked = rerank(query, fused, k=len(fused))
+    results = deduplicate_evidence(reranked, k=k)
+    trace_event(
+        "retrieval_finished",
+        dense_count=len(dense_results),
+        sparse_count=len(sparse_results),
+        fused_count=len(fused),
+        result_count=len(results),
+        top_score=results[0][1] if results else None,
     )
-    return rerank(query, fused, k=k)
+    return results
 
 
 def retrieve(
@@ -143,6 +201,8 @@ if __name__ == "__main__":
         hybrid_retrieve(args.query, k=args.k, index_path=args.index_path),
         start=1,
     ):
-        print(f"[{number}] score={score:.4f}")
+        section = " > ".join(document.metadata.get("section_path", []))
+        chunk_id = document.metadata.get("chunk_id", f"chunk-{number}")
+        print(f"[{number}] score={score:.4f} chunk_id={chunk_id} section={section}")
         print(document.page_content)
         print()

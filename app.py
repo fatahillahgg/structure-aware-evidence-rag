@@ -6,10 +6,9 @@ from rag import answer_question
 
 
 def chat(message: str, history: list[dict]) -> str:
-    """Answer one question using the paper as the only knowledge source."""
-    del history  # The naive RAG prompt intentionally answers each turn independently.
+    """Answer one question using the paper and recent conversation history."""
     try:
-        return answer_question(message)
+        return answer_question(message, history=history)
     except Exception as error:
         return f"Unable to answer the question: {error}"
 

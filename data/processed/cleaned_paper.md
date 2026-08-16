@@ -13,7 +13,7 @@ keywords:
   - CT scans
   - VGG16
   - convolutional neural networks
-source_pdf: "data/AI-Powered Lung Cancer Detection- Assessing VGG16 and CNN Architectures for CT Scan Image Classification.pdf"
+source_pdf: "data/raw/source_paper.pdf"
 cleaned_with: citra
 ---
 
